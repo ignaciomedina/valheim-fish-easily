@@ -23,7 +23,7 @@ import sys
 import zipfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-REFS = "/tmp/valheim-src"          # decompiled source drop (FishingFloat.cs, Fish.cs)
+REFS = os.environ.get("FISHEASILY_REFS", "/tmp/valheim-src")  # decompiled FishingFloat.cs, Fish.cs
 DLL = os.path.join(HERE, "bin", "Release", "FishEasily.dll")
 
 # member -> declaration pattern expected in the decompiled source
