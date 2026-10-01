@@ -62,6 +62,17 @@ effect on the next cast.
 Install with r2modman (or any Thunderstore mod manager). BepInExPack is the only
 dependency and a mod manager will pull it in for you.
 
+## Build from source
+
+```
+./build.sh --no-bump --deploy
+```
+
+Rebuilds the current version, writes `dist/Fish_Easily-<version>.zip` and copies the DLL
+into the r2modman profile. Import the zip in r2modman once first, so the
+`<author>-Fish_Easily` folder exists. Restart Valheim to load the new build.
+`./build.sh --help` lists the version bump options.
+
 ## Notes
 
 - Built against the Valheim 1.0.16 game assemblies, with BepInEx 5.4.23.5 and HarmonyX.
