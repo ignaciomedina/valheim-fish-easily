@@ -1,0 +1,9 @@
+{
+    "name": "FishEasily",
+    "version_number": "1.0.0",
+    "website_url": "",
+    "description": "Fishing without the fight. Any bait catches any fish, auto-hook, no stamina drain, no line breaks, instant land. Client-side and every piece toggleable.",
+    "dependencies": [
+        "denikson-BepInExPack_Valheim-5.4.2351"
+    ]
+}
