@@ -5,6 +5,12 @@ then package the Thunderstore zip.
 Run from the project directory:
     python3 package.py
 
+The decompiled source in /tmp/valheim-src does not survive a reboot. Regenerate it with:
+    mkdir -p /tmp/valheim-src
+    for t in FishingFloat Fish; do
+        ilspycmd -t $t <Valheim>/valheim_Data/Managed/assembly_valheim.dll > /tmp/valheim-src/$t.cs
+    done
+
 Step 1 asserts that every member Fish-Easily reaches by name is really declared in
 assembly_valheim.dll (checked against ilspycmd output, so it is evidence and not a
 recollection). Step 2 builds the Thunderstore-format zip r2modman imports.
@@ -30,7 +36,6 @@ EXPECTED = {
         "SetCatch": r"private\s+void\s+SetCatch\(Fish\s+fish\)",
         "ReturnBait": r"private\s+void\s+ReturnBait\(\)",
         "GetOwner": r"private\s+Character\s+GetOwner\(\)",
-        "Message": r"private\s+void\s+Message\(string\s+msg",
         "FixedUpdate": r"void\s+FixedUpdate\(\)",
         "Awake": r"void\s+Awake\(\)",
         "Catch": r"public\s+static\s+string\s+Catch\(Fish\s+fish,\s*Character\s+owner\)",
@@ -55,7 +60,7 @@ print("== 1. reflection targets vs decompiled Valheim source")
 for filename, members in EXPECTED.items():
     path = os.path.join(REFS, filename)
     if not os.path.exists(path):
-        failures.append(f"{filename} missing (run the ilspycmd dump first)")
+        failures.append(f"{filename} missing (run the ilspycmd dump in the docstring)")
         continue
     src = open(path, encoding="utf-8").read()
     for member, pattern in members.items():
@@ -86,27 +91,30 @@ for f in strays:
 if not strays:
     print("   OK   only FishEasily.dll")
 
+print("\n== 4. package files present")
+contents = ["manifest.json", "icon.png", "README.md", "CHANGELOG.md"]
+for c in contents:
+    ok = os.path.exists(os.path.join(HERE, c))
+    print(f"   {'OK  ' if ok else 'MISS'} {c}")
+    if not ok:
+        failures.append(f"package file: {c}")
+
 if failures:
     print("\nFAILED:")
     for f in failures:
         print("  -", f)
     sys.exit(1)
 
-print("\n== 4. packaging")
+print("\n== 5. packaging")
 manifest = json.load(open(os.path.join(HERE, "manifest.json"), encoding="utf-8"))
 version = manifest["version_number"]
 dist = os.path.join(HERE, "dist")
 os.makedirs(dist, exist_ok=True)
 out = os.path.join(dist, f"{manifest['name']}-{version}.zip")
 
-contents = ["manifest.json", "icon.png", "README.md", "CHANGELOG.md"]
 with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
     for c in contents:
-        p = os.path.join(HERE, c)
-        if os.path.exists(p):
-            z.write(p, c)
-        else:
-            print(f"   note: {c} not present, skipped")
+        z.write(os.path.join(HERE, c), c)
     z.write(DLL, "FishEasily.dll")
 
 with zipfile.ZipFile(out) as z:

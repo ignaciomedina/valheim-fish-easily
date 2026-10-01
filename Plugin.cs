@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using BepInEx;
 using BepInEx.Configuration;
@@ -8,10 +7,11 @@ using HarmonyLib;
 
 namespace FishEasily
 {
-    [BepInPlugin(Guid, "Fish-Easily", "1.0.0")]
+    [BepInPlugin(Guid, "Fish-Easily", Version)]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "valheim.fisheasily";
+        public const string Version = "1.0.0";
 
         internal static ManualLogSource Log;
 
@@ -22,7 +22,6 @@ namespace FishEasily
         // 2 - The Bite
         internal static ConfigEntry<bool> FishComeToYou;
         internal static ConfigEntry<bool> AutoHook;
-        internal static ConfigEntry<float> HookWindowSeconds;
 
         // 3 - The Fight
         internal static ConfigEntry<bool> NoStaminaDrain;
@@ -56,11 +55,6 @@ namespace FishEasily
                 "2 - The Bite", "Auto Hook", true,
                 "Hook the fish the moment it nibbles. No reaction timing.");
 
-            HookWindowSeconds = Config.Bind(
-                "2 - The Bite", "Hook Window Seconds", 3.0f,
-                "With Auto Hook on, how long a nibble stays valid (seconds). Vanilla is 0.5. " +
-                "Set to 0 to hook no matter how long ago the nibble was.");
-
             NoStaminaDrain = Config.Bind(
                 "3 - The Fight", "No Stamina Drain", true,
                 "Reeling and holding a hooked fish cost no stamina, so you never lose a fish " +
@@ -85,16 +79,18 @@ namespace FishEasily
             _harmony = new Harmony(Guid);
             // NOTE: Harmony.PatchAll(Type) only builds a processor for that one type and
             // never descends into nested classes, so it silently applied nothing here.
-            // PatchAll(Assembly) is the overload that walks nested types.
+            // PatchAll(Assembly) is the overload that walks nested types. It also throws on
+            // any target it cannot find, so a missing method aborts loading with Harmony's
+            // own error naming it.
             _harmony.PatchAll(typeof(Plugin).Assembly);
             VerifyPatches();
 
-            Logger.LogInfo("Fish-Easily 1.0.0 loaded - fishing is now a foregone conclusion.");
+            Logger.LogInfo($"Fish-Easily {Version} loaded - fishing is now a foregone conclusion.");
         }
 
         /// <summary>
-        /// Harmony fails quietly: a patch class that matches nothing produces no error at
-        /// all. Ask Harmony what it actually patched and shout if a target is missing.
+        /// Log what Harmony actually patched, so a patch call that walks no classes at all
+        /// (the PatchAll(Type) mistake above) shows up as "0 patched" instead of silence.
         /// </summary>
         private void VerifyPatches()
         {
@@ -104,26 +100,6 @@ namespace FishEasily
             foreach (MethodBase m in patched)
             {
                 Logger.LogInfo($"  patched: {m.DeclaringType?.Name}.{m.Name}");
-            }
-
-            string[] expected =
-            {
-                "Fish.TestBate", "Fish.FindFloat", "Fish.Escape", "Fish.GetStaminaUse",
-                "FishingFloat.Awake", "FishingFloat.FixedUpdate"
-            };
-
-            var have = new HashSet<string>(
-                patched.Select(m => $"{m.DeclaringType?.Name}.{m.Name}"));
-
-            var missing = expected.Where(e => !have.Contains(e)).ToArray();
-            if (missing.Length > 0)
-            {
-                Logger.LogError("Fish-Easily: these methods were NOT patched, so their features "
-                                + "will do nothing: " + string.Join(", ", missing));
-            }
-            else
-            {
-                Logger.LogInfo("Fish-Easily: all 6 patch targets confirmed applied.");
             }
         }
     }

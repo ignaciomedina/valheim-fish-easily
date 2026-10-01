@@ -26,9 +26,9 @@ namespace FishEasily
         private static MethodInfo _setCatch;
         private static MethodInfo _returnBait;
         private static MethodInfo _getOwner;
-        private static MethodInfo _ffMessage;
 
         private static readonly List<string> Missing = new List<string>();
+        private static bool _fixedUpdateErrorLogged;
 
         internal static void ResolveTargets()
         {
@@ -43,7 +43,6 @@ namespace FishEasily
             _setCatch = TryMethod("FishingFloat.SetCatch");
             _returnBait = TryMethod("FishingFloat.ReturnBait");
             _getOwner = TryMethod("FishingFloat.GetOwner");
-            _ffMessage = TryMethod("FishingFloat.Message");
 
             if (Missing.Count > 0)
             {
@@ -208,8 +207,8 @@ namespace FishEasily
 
                 if (Plugin.LineNeverBreaks.Value)
                 {
-                    // FixedUpdate breaks the line when (rodDist - lineLength) > m_breakDistance,
-                    // and reels the float back once rodDist > m_maxDistance.
+                    // FixedUpdate breaks the line when (rodDist - lineLength) > m_breakDistance
+                    // or rodDist > m_maxDistance.
                     __instance.m_breakDistance = 100000f;
                     __instance.m_maxDistance = 100000f;
                 }
@@ -234,35 +233,39 @@ namespace FishEasily
 
                     if (Plugin.AutoHook.Value && __instance.GetCatch() == null)
                     {
+                        // Vanilla TryToHook's 0.5s window. A fresh nibble is hooked on the next
+                        // tick anyway; this only skips a stale one from before Auto Hook was on.
                         Fish nibbler = _nibbler(__instance);
-                        if (nibbler != null)
+                        if (nibbler != null && Time.time - _nibbleTime(__instance) < 0.5f)
                         {
-                            float window = Plugin.HookWindowSeconds.Value;
-                            bool valid = window <= 0f || (Time.time - _nibbleTime(__instance)) <= window;
-                            if (valid) Hook(__instance, nibbler);
+                            Hook(__instance, nibbler);
                         }
                     }
 
                     if (Plugin.InstantLand.Value)
                     {
                         Fish hooked = __instance.GetCatch();
-                        if (hooked != null)
+                        if (hooked != null && Land(__instance, hooked))
                         {
-                            Land(__instance, hooked);
                             return false; // the fish is in the bag; nothing left to simulate
                         }
                     }
                 }
                 catch (Exception e)
                 {
-                    Plugin.Log.LogError("Fish-Easily FixedUpdate patch failed: " + e);
+                    // FixedUpdate runs ~50 times a second per float; log the first failure only.
+                    if (!_fixedUpdateErrorLogged)
+                    {
+                        _fixedUpdateErrorLogged = true;
+                        Plugin.Log.LogError("Fish-Easily FixedUpdate patch failed (repeats suppressed): " + e);
+                    }
                 }
 
                 return true;
             }
         }
 
-        /// <summary>Mirrors FishingFloat.TryToHook, minus the 0.5s reaction window.</summary>
+        /// <summary>Mirrors the body of FishingFloat.TryToHook.</summary>
         private static void Hook(FishingFloat ff, Fish fish)
         {
             Character owner = (Character)_getOwner.Invoke(ff, null);
@@ -272,11 +275,15 @@ namespace FishEasily
             if (owner != null) Message(ff, owner, "$msg_fishing_hooked");
         }
 
-        /// <summary>Mirrors the m_lineLength &lt;= 0.5f branch of FishingFloat.FixedUpdate.</summary>
-        private static void Land(FishingFloat ff, Fish fish)
+        /// <summary>
+        /// Mirrors the m_lineLength &lt;= 0.5f branch of FishingFloat.FixedUpdate.
+        /// Returns false without touching anything when the owner is gone, so vanilla
+        /// FixedUpdate still runs and destroys the orphaned float.
+        /// </summary>
+        private static bool Land(FishingFloat ff, Fish fish)
         {
             Character owner = (Character)_getOwner.Invoke(ff, null);
-            if (owner == null) return;
+            if (owner == null) return false;
 
             string msg = FishingFloat.Catch(fish, owner);
             Message(ff, owner, msg);
@@ -284,16 +291,32 @@ namespace FishEasily
             _setCatch.Invoke(ff, new object[] { null });
             fish.OnHooked(null);
 
-            if (Plugin.BaitNotConsumed.Value)
-            {
-                // SetCatch() set m_baitConsumed = true. ReturnBait() only pays out when it
-                // is false, so clear the flag first and then run the vanilla refund.
-                _baitConsumed(ff) = false;
-                if (_returnBait != null) _returnBait.Invoke(ff, null);
-            }
-
             ZNetView nview = _nview(ff);
             if (nview != null) nview.Destroy();
+            return true;
+        }
+
+        /// <summary>
+        /// The bait leaves the inventory at cast time and SetCatch() marks it consumed.
+        /// Every landing (vanilla reel-in and Instant Land) goes through FishingFloat.Catch
+        /// while the catch is still set, so FindFloat(fish) finds the float and the refund
+        /// works whether Instant Land is on or off. The debug console's catch command has
+        /// no float, so FindFloat returns null and nothing is refunded.
+        /// </summary>
+        [HarmonyPatch(typeof(FishingFloat), nameof(FishingFloat.Catch))]
+        private static class FishingFloat_Catch
+        {
+            private static void Prefix(Fish fish)
+            {
+                if (!Plugin.BaitNotConsumed.Value || _baitConsumed == null || _returnBait == null) return;
+
+                FishingFloat ff = FishingFloat.FindFloat(fish);
+                if (ff == null) return;
+
+                // ReturnBait() only pays out when m_baitConsumed is false, so clear it first.
+                _baitConsumed(ff) = false;
+                _returnBait.Invoke(ff, null);
+            }
         }
 
         private static void Message(FishingFloat ff, Character owner, string msg)

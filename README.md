@@ -27,7 +27,6 @@ flip, so the fish you can see are the fish that come to your float.
 
 **Auto hook**
 The fish is on the line the instant it nibbles. No reaction window, no missed hooks.
-The nibble stays valid for `Hook Window Seconds` (default 3, vanilla is 0.5).
 
 **No stamina drain**
 Reeling, and holding a hooked fish, cost nothing. An empty stamina bar can no longer
@@ -40,6 +39,7 @@ stamina cost while a fish fights.
 **Instant land**
 The fish is in your inventory the moment it is hooked. No tug of war, no button hold.
 Turn this off if you want to keep the fight and only keep the conveniences.
+Fishing skill only rises while reeling, so with this on it stops leveling.
 
 **Line never breaks**
 Neither distance nor a fighting fish can snap the line. The float only goes away when
@@ -52,7 +52,7 @@ effect on the next cast.
 
 ```
 [1 - Bait]      One Bait Fits All, Bait Not Consumed
-[2 - The Bite]  Fish Come To You, Auto Hook, Hook Window Seconds
+[2 - The Bite]  Fish Come To You, Auto Hook
 [3 - The Fight] No Stamina Drain, Fish Never Escape, Instant Land
 [4 - The Line]  Line Never Breaks
 ```
@@ -68,8 +68,11 @@ dependency and a mod manager will pull it in for you.
 - Private game members are reached through cached Harmony accessors, and every one is
   resolved at load. If a future Valheim patch renames something, the log says exactly
   which member went missing instead of quietly doing nothing.
-- The plugin asks Harmony which methods it actually patched and logs the list at startup,
-  so a patch that silently fails to attach is reported instead of looking like a working
-  install.
-- The log lines `Fish-Easily 1.0.0 loaded` and `all 6 patch targets confirmed applied`
-  in `BepInEx/LogOutput.log` mean it is really running.
+- The plugin logs every method Harmony patched at startup. If a Valheim update removes a
+  patch target, Harmony refuses to load the plugin and the log names the method.
+- The log lines `Harmony reports 7 patched method(s)` and `Fish-Easily 1.0.0 loaded` in
+  `BepInEx/LogOutput.log` mean it is really running.
+- Multiplayer: Valheim runs fish behaviour on whichever player's game owns the fish,
+  usually the first player who got near it. One Bait Fits All and Fish Come To You only
+  work when that player has Fish-Easily, and when they do, they also apply to other
+  players' floats nearby. Everything else follows the player holding the rod.
