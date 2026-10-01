@@ -31,9 +31,9 @@ cd "$HERE"
 
 PROFILE="${FISHEASILY_PROFILE:-$HOME/.config/r2modmanPlus-local/Valheim/profiles/Default}"
 R2MM="${FISHEASILY_R2MM:-$HOME/.config/r2modmanPlus-local/Valheim}"
-# r2modman names a local import "<author>-FishEasily"; match whatever author was used.
-PLUGIN_DIR="$(compgen -G "$PROFILE/BepInEx/plugins/*-FishEasily" | head -1 || true)"
-PKG_DIR_NAME="$(basename "${PLUGIN_DIR:-unknown-FishEasily}")"
+# r2modman names a local import "<author>-Fish_Easily"; match whatever author was used.
+PLUGIN_DIR="$(compgen -G "$PROFILE/BepInEx/plugins/*-Fish_Easily" | head -1 || true)"
+PKG_DIR_NAME="$(basename "${PLUGIN_DIR:-unknown-Fish_Easily}")"
 CACHE_DIR="$R2MM/cache/$PKG_DIR_NAME"
 MODS_YML="$PROFILE/mods.yml"
 DOWNLOADS="${FISHEASILY_DOWNLOADS:-$HOME/Downloads}"
@@ -258,7 +258,7 @@ fi
 
 python3 package.py
 
-ZIP="dist/FishEasily-$NEW.zip"
+ZIP="dist/Fish_Easily-$NEW.zip"
 if [[ ! -f "$ZIP" ]]; then
     echo "error: expected $ZIP was not produced" >&2
     exit 1
@@ -280,7 +280,7 @@ if [[ "$DEPLOY" -eq 1 ]]; then
     DLL="bin/Release/FishEasily.dll"
 
     if [[ -z "$PLUGIN_DIR" ]]; then
-        echo "   no *-FishEasily folder in $PROFILE/BepInEx/plugins" >&2
+        echo "   no *-Fish_Easily folder in $PROFILE/BepInEx/plugins" >&2
         echo "   import the zip in r2modman once, then --deploy can keep it updated" >&2
         exit 1
     fi
