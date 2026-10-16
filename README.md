@@ -75,13 +75,13 @@ into the r2modman profile. Import the zip in r2modman once first, so the
 
 ## Notes
 
-- Built against the Valheim 1.0.16 game assemblies, with BepInEx 5.4.23.5 and HarmonyX.
+- Built against and verified on the Valheim 1.0.20 game assemblies, with BepInEx 5.4.23.5 and HarmonyX.
 - Private game members are reached through cached Harmony accessors, and every one is
   resolved at load. If a future Valheim patch renames something, the log says exactly
   which member went missing instead of quietly doing nothing.
 - The plugin logs every method Harmony patched at startup. If a Valheim update removes a
   patch target, Harmony refuses to load the plugin and the log names the method.
-- The log lines `Harmony reports 7 patched method(s)` and `Fish-Easily 1.0.0 loaded` in
+- The log lines `Harmony reports 7 patched method(s)` and `Fish-Easily 1.0.1 loaded` in
   `BepInEx/LogOutput.log` mean it is really running.
 - Multiplayer: Valheim runs fish behaviour on whichever player's game owns the fish,
   usually the first player who got near it. One Bait Fits All and Fish Come To You only
